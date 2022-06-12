@@ -1,101 +1,65 @@
-import React, { useEffect } from "react";
-import * as Pitchfinder from "pitchfinder";
+import React, { useEffect, useState } from "react";
+import { Note } from "@tonaljs/tonal";
+import { PitchDetector } from "pitchy";
 
-const sampleRate = 16000;
+const Tuner = ({ setNotesList, shouldRecord }) => {
+  const [frequency, setFrequency] = useState(0);
+  const [clarity, setClarity] = useState(0);
+  const [note, setNote] = useState("");
+  const [transposedNote, setTrasnposedNote] = useState("");
 
-const audioOptions = {
-  video: false,
-  audio: {
-    echoCancellation: true,
-    noiseSuppression: true,
-    sampleRate,
-  },
-};
+  const updatePitch = (analyserNode, detector, input, sampleRate) => {
+    analyserNode.getFloatTimeDomainData(input);
+    const [pitch, clarty] = detector.findPitch(input, sampleRate);
 
-const mediaRecorderOptions = {
-  // mimeType: "audio/webm",
-  numberOfAudioChannels: 1,
-  sampleRate,
-};
+    const ptch = `${Math.round(pitch * 10) / 10} Hz`;
+    const clartyString = `${Math.round(clarty * 100)} %`;
+    let nt = Note.fromFreqSharps(pitch);
 
-const keys = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-
-function analyseAudioData({ sampleRate, audioData }) {
-  const detectPitch = Pitchfinder.YIN({ sampleRate });
-
-  const frequency = detectPitch(audioData);
-  if (frequency === null) {
-    console.log({ frequency });
-
-    return null;
-  }
-
-  // Convert the frequency to a musical pitch.
-
-  // c = 440.0(2^-4.75)
-  const c0 = 440.0 * Math.pow(2.0, -4.75);
-  // h = round(12log2(f / c))
-  const halfStepsBelowMiddleC = Math.round(12.0 * Math.log2(frequency / c0));
-  // o = floor(h / 12)
-  const octave = Math.floor(halfStepsBelowMiddleC / 12.0);
-  const key = keys[Math.floor(halfStepsBelowMiddleC % 12)];
-
-  return { frequency, key, octave };
-}
-
-const getAudio = async () => {
-  const chunks = [];
-  let mediaRecorder;
-  const audioContext = new AudioContext();
-  const stream = await navigator.mediaDevices.getUserMedia(audioOptions);
-
-  mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
-
-  mediaRecorder.ondataavailable = async (e) => {
-    if (e.data.size) {
-      try {
-        const data = e.data;
-        console.log(data);
-        // Load the blob.
-        const response = await fetch(URL.createObjectURL(data));
-        const arrayBuffer = await response.arrayBuffer();
-
-        // Decode the audio.
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        const float32Array = audioBuffer.getChannelData(0);
-        console.log(float32Array);
-
-        const detectPitch = Pitchfinder.YIN();
-        const pitch = detectPitch(float32Array);
-
-        // const res = analyseAudioData({ sampleRate, audioData: float32Array });
-        // console.log(res);
-
-        console.log(pitch);
-      } catch (error) {
-        console.log("error: ", error);
-        console.log(error);
-      }
+    const length = nt.length;
+    const lastChar = nt[length - 1];
+    if (+lastChar) {
+      nt = nt.slice(0, length - 1);
     }
+
+    const transposedNt = Note.transpose(nt, "1P");
+
+    if (
+      pitch > 80 &&
+      pitch < 2000 &&
+      clarty > 0.7 &&
+      nt?.length &&
+      // transposedNt?.length &&
+      nt !== note
+    ) {
+      setFrequency(ptch);
+      setClarity(clartyString);
+      setNote(nt);
+      setTrasnposedNote(transposedNt);
+    }
+    window.setTimeout(
+      () => updatePitch(analyserNode, detector, input, sampleRate),
+      300
+    );
   };
 
-  mediaRecorder.start(2000);
-};
-const Tuner = () => {
   useEffect(() => {
-    getAudio();
-  }, []);
+    if (shouldRecord) {
+      setNotesList((currList) => [...currList, note]);
+    }
+  }, [note, setNotesList, shouldRecord]);
 
-  // const temp = async () => {
-  //   const stream = await navigator.mediaDevices.getUserMedia(audioOptions);
-  //   console.log(stream);
-  //   const recorder = new MediaRecorder(stream, {
-  //     mimeType: "video/webm",
-  //   });
-  //   recorder.start()
-  //   console.log(recorder.state);
-  // };
-  // temp();
+  useEffect(() => {
+    const audioContext = new window.AudioContext();
+    const analyserNode = audioContext.createAnalyser();
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      audioContext.createMediaStreamSource(stream).connect(analyserNode);
+      const detector = PitchDetector.forFloat32Array(analyserNode.fftSize);
+      const input = new Float32Array(detector.inputLength);
+      // updatePitch(analyserNode, detector, input, audioContext.sampleRate);
+      updatePitch(analyserNode, detector, input, 48000);
+    });
+  }, []);
 
   return (
     <div>
@@ -109,12 +73,11 @@ const Tuner = () => {
           alignItems: "center",
         }}
       >
-        <button onClick={() => getAudio()}>stop</button>
-        <button onClick={() => getAudio()}>Start</button>
-        <h2>
-          E <sub>4</sub>
-        </h2>
-        <p>440Hz</p>
+        <h1>Note: {note}</h1>
+        <h2>Transposed Note: {transposedNote}</h2>
+
+        <p>Frequency: {frequency} </p>
+        <p>Clarity: {clarity} </p>
       </div>
     </div>
   );
