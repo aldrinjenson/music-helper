@@ -1,25 +1,33 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+import "./App.css";
+import Navbar from "./components/Navbar";
+import NoteViewer from "./components/NoteViewer";
+import Tuner from "./components/Tuner";
 
-function App() {
+let defaultNotes = ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E"];
+defaultNotes = [
+  ...defaultNotes,
+  ...defaultNotes,
+  ...defaultNotes,
+  ...defaultNotes,
+];
+
+const App = () => {
+  const [notes, setNotes] = useState(defaultNotes);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className='App'>
+      <Navbar />
+      <div className='flex  items-center justify-center flex-wrap'>
+        <div className='flex-1 mx-10'>
+          <Tuner />
+        </div>
+        <div className='flex-3'>
+          <NoteViewer notes={notes} />
+        </div>
+      </div>
     </div>
   );
-}
+};
 
 export default App;
