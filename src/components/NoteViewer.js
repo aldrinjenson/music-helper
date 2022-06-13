@@ -11,12 +11,10 @@ const NoteViewer = ({
     for (const nt of notesList) {
       numOccurances[nt] = (numOccurances[nt] || 0) + 1;
     }
-    console.log(numOccurances);
     const entries = Object.entries(numOccurances);
-    console.log(entries);
     const sorted = entries.sort(([key1, val1], [key2, val2]) => val2 > val1);
-    console.log(sorted);
-    // console.log(Scale.scaleNotes(notesList));
+    sorted?.length && console.log(sorted);
+    console.log(Scale.scaleNotes(notesList));
   }
   return (
     <div style={{ width: "70vw" }} className='border mr-10'>
