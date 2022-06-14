@@ -73,7 +73,10 @@ const Tuner = ({ setNotesList, shouldRecord }) => {
           alignItems: "center",
         }}
       >
-        <h1>Note: {note}</h1>
+        <h1>
+          {/* Note: */}
+          <span className='text-8xl'>{note}</span>
+        </h1>
         <h2>Transposed Note: {transposedNote}</h2>
 
         <p>Frequency: {frequency} </p>
